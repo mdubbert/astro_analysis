@@ -149,6 +149,7 @@ Resources:
           - Effect: Allow
             Action: 
               - kinesis:DescribeStream
+              - kinesis:ListShards
               - kinesis:GetShardIterator
               - kinesis:GetRecords
             Resource: !GetAtt AstroStream.Arn
@@ -169,5 +170,12 @@ Resources:
             - - 'arn:aws:s3:::'
               - !Ref CodeBucketName
               - '/streaming_crossmatch/code/consumer/*'
+          - Effect: Allow
+            Action: 
+              - glue:GetDatabase
+              - glue:GetDatabases
+              - glue:GetTable
+              - glue:GetTables
+            Resource: '*'
       Roles:
         - !Ref ConsumerRole
