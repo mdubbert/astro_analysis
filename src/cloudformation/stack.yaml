@@ -58,8 +58,10 @@ Resources:
         ExecutionProperty:
           MaxConcurrentRuns: 1
         GlueVersion: "3.0"
-        MaxCapacity: 1
+        # Below value is DPU, default of 0.0625
+        MaxCapacity: 0.0625
         Role: !GetAtt ProducerRole.Arn
+        Timeout: 60
 
   ProducerRole:
     Type: AWS::IAM::Role
