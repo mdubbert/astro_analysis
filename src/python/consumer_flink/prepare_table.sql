@@ -6,6 +6,7 @@ CREATE TABLE sbdb_table (
                 gravitational_mass DOUBLE,
                 kind VARCHAR(2),
                 is_neo BOOLEAN,
+                is_pha BOOLEAN,
                 processing_timestamp TIMESTAMP(3),
                 WATERMARK FOR processing_timestamp AS processing_timestamp - INTERVAL '5' SECOND
 

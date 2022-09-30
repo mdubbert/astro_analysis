@@ -177,6 +177,7 @@ Resources:
               - glue:GetTable
               - glue:GetTables
               - glue:GetUserDefinedFunction
+              - glue:CreateTable
             Resource: '*'
       Roles:
         - !Ref ConsumerRole
