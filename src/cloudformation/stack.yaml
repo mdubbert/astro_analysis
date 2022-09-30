@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Performs stream processing of astronomical observations
+
+Resources:
+  AstroStream:
+    Type: AWS::Kinesis::Stream
+    Properties: 
+      Name: astro-stream
+      RetentionPeriodHours: 24
+      ShardCount: 1
+      StreamEncryption: 
+        EncryptionType: KMS
+        KeyId: !Ref AstroStreamKey
+      StreamModeDetails: 
+        StreamMode: PROVISIONED
+
+  AstroStreamKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Used to encrypt Kinesis Data Stream contents
+      Enabled: True
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: ad-astra-per-scientiam
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: 
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+                - !Sub "arn:aws:iam::${AWS::AccountId}:user/service_astro_analysis"
+            Action:
+              - 'kms:*'
+            Resource: '*'
+
+  AstroDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: astro_analysis
+        Description: Hosts tables containing astronomy data
