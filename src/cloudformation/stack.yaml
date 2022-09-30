@@ -120,3 +120,54 @@ Resources:
             Resource: '*'
       Roles:
         - !Ref ProducerRole
+
+  ConsumerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+                - kinesisanalytics.amazonaws.com
+      Description: For reading records from Kinesis data stream
+      
+  ConsumerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: astro-consumer-policy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: 
+              - kms:Decrypt
+            Resource: !GetAtt AstroStreamKey.Arn
+          - Effect: Allow
+            Action: 
+              - kinesis:DescribeStream
+              - kinesis:GetShardIterator
+              - kinesis:GetRecords
+            Resource: !GetAtt AstroStream.Arn
+          # Access to application package
+          - Effect: Allow
+            Action:
+              - s3:List*
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref CodeBucketName
+          - Effect: Allow
+            Action: 
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref CodeBucketName
+              - '/streaming_crossmatch/code/consumer/*'
+      Roles:
+        - !Ref ConsumerRole
