@@ -169,13 +169,14 @@ Resources:
             - ''
             - - 'arn:aws:s3:::'
               - !Ref CodeBucketName
-              - '/streaming_crossmatch/code/consumer/*'
+              - '/astro_analysis/code/consumer/*'
           - Effect: Allow
             Action: 
               - glue:GetDatabase
               - glue:GetDatabases
               - glue:GetTable
               - glue:GetTables
+              - glue:GetUserDefinedFunction
             Resource: '*'
       Roles:
         - !Ref ConsumerRole
