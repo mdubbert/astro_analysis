@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Performs stream processing of astronomical observations
 
+Parameters:
+  CodeBucketName:
+    Type: String
+    MinLength: 6
+
 Resources:
   AstroStream:
     Type: AWS::Kinesis::Stream
@@ -40,3 +45,78 @@ Resources:
       DatabaseInput:
         Name: astro_analysis
         Description: Hosts tables containing astronomy data
+
+  ProducerJob:
+    Type: AWS::Glue::Job
+    Properties:
+        Name: producer_sbdb
+        MaxRetries: 0
+        Command:
+          Name: pythonshell
+          PythonVersion: "3.9"
+          ScriptLocation: !Sub "s3://${CodeBucketName}/astro_analysis/code/producer/producer.py"
+        ExecutionProperty:
+          MaxConcurrentRuns: 1
+        # GlueVersion: "2.0"
+        # Below value is DPU, default of 0.0625
+        MaxCapacity: 0.0625
+        Role: !GetAtt ProducerRole.Arn
+        Timeout: 60
+
+  ProducerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service:
+                - glue.amazonaws.com
+      Description: For writing records to Kinesis data stream
+      
+  ProducerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: astro-producer-policy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: 
+              - kms:GenerateDataKey
+              - kms:Encrypt
+            Resource: !GetAtt AstroStreamKey.Arn
+          - Effect: Allow
+            Action: 
+              - kinesis:PutRecord
+              - kinesis:PutRecords
+            Resource: !GetAtt AstroStream.Arn
+          - Effect: Allow
+            Action:
+              - s3:List*
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref CodeBucketName
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref CodeBucketName
+              - '/astro_analysis/code/producer/*'
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: !Sub 'arn:aws:logs:us-east-1:${AWS::AccountId}:*'
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogGroup'
+            Resource: '*'
+      Roles:
+        - !Ref ProducerRole
