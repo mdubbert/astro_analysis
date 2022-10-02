@@ -1,0 +1,14 @@
+@startuml
+
+cloud {
+    [SBDB-API]
+}
+
+[SBDB-API] -- [Producer]
+[Producer] ..> [AWS Kinesis]: sends to
+[Flink consumer] ..> [AWS Kinesis]: reads from
+[AWS IAM]
+
+
+
+@enduml
