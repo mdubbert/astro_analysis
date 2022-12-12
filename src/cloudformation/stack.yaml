@@ -5,12 +5,15 @@ Parameters:
   CodeBucketName:
     Type: String
     MinLength: 6
+  StackName:
+    Type: String
+    MinLength: 8
 
 Resources:
   AstroStream:
     Type: AWS::Kinesis::Stream
     Properties: 
-      Name: astro-stream
+      Name: !Sub '${StackName}_astro-stream'
       RetentionPeriodHours: 24
       ShardCount: 1
       StreamEncryption: 
@@ -43,18 +46,18 @@ Resources:
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
-        Name: astro_analysis
+        Name: !Ref StackName
         Description: Hosts tables containing astronomy data
 
   ProducerJob:
     Type: AWS::Glue::Job
     Properties:
-        Name: producer_sbdb
+        Name: !Sub '${StackName}_producer_sbdb'
         MaxRetries: 0
         Command:
           Name: pythonshell
           PythonVersion: "3.9"
-          ScriptLocation: !Sub "s3://${CodeBucketName}/astro_analysis/code/producer/producer.py"
+          ScriptLocation: !Sub "s3://${CodeBucketName}/${StackName}/code/producer/producer.py"
         ExecutionProperty:
           MaxConcurrentRuns: 1
         # GlueVersion: "2.0"
@@ -80,7 +83,7 @@ Resources:
   ProducerPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: astro-producer-policy
+      PolicyName: !Sub '${StackName}-astro-producer-policy'
       PolicyDocument:
         Statement:
           - Effect: Allow
@@ -108,7 +111,9 @@ Resources:
             - ''
             - - 'arn:aws:s3:::'
               - !Ref CodeBucketName
-              - '/astro_analysis/code/producer/*'
+              - '/'
+              - !Ref StackName
+              - '/code/producer/*'
           - Effect: Allow
             Action:
               - 'logs:CreateLogStream'
@@ -139,7 +144,7 @@ Resources:
   ConsumerPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: astro-consumer-policy
+      PolicyName: !Sub '${StackName}-astro-consumer-policy'
       PolicyDocument:
         Statement:
           - Effect: Allow
@@ -169,7 +174,9 @@ Resources:
             - ''
             - - 'arn:aws:s3:::'
               - !Ref CodeBucketName
-              - '/astro_analysis/code/consumer/*'
+              - '/'
+              - !Ref StackName
+              - '/code/consumer/*'
           - Effect: Allow
             Action: 
               - glue:GetDatabase
@@ -181,3 +188,30 @@ Resources:
             Resource: '*'
       Roles:
         - !Ref ConsumerRole
+
+  AstroRegistry:
+    Type: AWS::Glue::Registry
+    Properties: 
+      Description: Stores schema definitions and versions
+      Name: !Sub '${StackName}_astro_registry'
+
+  SBDBApiSchemaBase:
+    Type: AWS::Glue::Schema
+    Properties: 
+      # CheckpointVersion: 
+      #   SchemaVersion
+      Compatibility: BACKWARD
+      DataFormat: AVRO
+      # Description: String
+      Name: !Sub '${StackName}_sbdb_api'
+      Registry:
+        Arn: !GetAtt AstroRegistry.Arn
+      SchemaDefinition: >
+        {"namespace":"foo.avro","type":"record","name":"user","fields":[{"name":"name","type":"string"},{"name":"favorite_number","type":"int"}]}
+      
+  # TransformedSBDBSchema:
+  #   Type: AWS::Glue::SchemaVersion
+  #   Properties: 
+  #     Schema: 
+  #       !Ref SBDBApiSchemaBase
+  #     SchemaDefinition: String
